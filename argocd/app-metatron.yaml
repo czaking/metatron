@@ -1,0 +1,35 @@
+# ArgoCD Application:Metatron 内网站点导航台(纯静态 nginx + ConfigMap)。
+#
+# 与业务服务不同,不走 appsets/{dev,prod}-services.yaml;按 nacos-config-history /
+# superset 的独立内部工具模式部署:project=default、自建 namespace metatron、
+# 同步 metatron/manifests(kustomize:configMapGenerator 把 site-nav.html /
+# nginx.conf 生成带哈希的 ConfigMap,改 HTML → CM 名变 → Deployment 自动滚动)。
+#
+# 无自建镜像:直接用 public nginx:alpine。改站点内容只需改 site-nav.html 后合并,
+# ArgoCD 自动 sync。
+#
+# 部署:kubectl apply -f argocd/app-metatron.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metatron
+  namespace: argocd
+  annotations:
+    notifications.argoproj.io/subscribe.on-health-degraded.feishu: ""
+    notifications.argoproj.io/subscribe.on-sync-failed.feishu: ""
+spec:
+  project: default
+  source:
+    repoURL: git@github.com:your-org/your-gitops-repo.git
+    targetRevision: main
+    path: metatron/manifests
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: metatron
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>acme · 内网站点导航台</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='6' fill='%230B6B72'/><g fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 7.5v10'/><path d='M9 8h3.1a3.1 3.1 0 0 1 0 6.2H9'/></g><circle cx='16.4' cy='15.4' r='1.7' fill='%234FD6CE'/></svg>">
+<style>
+  /* ---------- Tokens ---------- */
+  :root {
+    --bg: #EBEEF2;
+    --surface: #FFFFFF;
+    --surface-2: #F4F6F9;
+    --border: #DCE1E8;
+    --border-strong: #C6CDD8;
+    --text: #141B24;
+    --muted: #5C6675;
+    --faint: #8A93A2;
+    --accent: #0B6B72;
+    --accent-ink: #06474C;
+    --accent-soft: #E0F0F0;
+    --up: #2E9E6B;
+    --warn: #C98A2B;
+    --down: #DB4F4A;
+    --unknown: #9AA3B0;
+    --checking: #6B8CC4;
+    /* env colors */
+    --env-aliyun: #E06A1B;
+    --env-intranet: #2C7DBB;
+    --env-saas: #7A6BC9;
+    --shadow: 0 1px 2px rgba(20,27,36,.05), 0 6px 20px rgba(20,27,36,.06);
+    --shadow-lift: 0 2px 6px rgba(20,27,36,.08), 0 16px 40px rgba(11,107,114,.14);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0D1117; --surface: #151B24; --surface-2: #1A222D; --border: #262F3B; --border-strong: #35404F;
+      --text: #E7ECF2; --muted: #97A2B2; --faint: #6B7686;
+      --accent: #4FD6CE; --accent-ink: #8DE9E3; --accent-soft: #17342F;
+      --up: #43C486; --warn: #E0A94A; --down: #F0716B; --unknown: #6B7686; --checking: #7FA3DC;
+      --env-aliyun: #F0864A; --env-intranet: #57A6E0; --env-saas: #A090E6;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+      --shadow-lift: 0 2px 6px rgba(0,0,0,.4), 0 18px 44px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D1117; --surface: #151B24; --surface-2: #1A222D; --border: #262F3B; --border-strong: #35404F;
+    --text: #E7ECF2; --muted: #97A2B2; --faint: #6B7686;
+    --accent: #4FD6CE; --accent-ink: #8DE9E3; --accent-soft: #17342F;
+    --up: #43C486; --warn: #E0A94A; --down: #F0716B; --unknown: #6B7686; --checking: #7FA3DC;
+    --env-aliyun: #F0864A; --env-intranet: #57A6E0; --env-saas: #A090E6;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 20px rgba(0,0,0,.35);
+    --shadow-lift: 0 2px 6px rgba(0,0,0,.4), 0 18px 44px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--sans); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto; } }
+
+  /* ---------- Top bar ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    -webkit-backdrop-filter: saturate(1.4) blur(12px);
+    backdrop-filter: saturate(1.4) blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .bar { max-width: none; margin: 0 auto; padding: 14px clamp(20px, 3vw, 48px); display: flex; align-items: center; gap: 18px; }
+  .brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
+  .wordmark { display: flex; flex-direction: column; }
+  .brand h1 { font-size: 22px; margin: 0; letter-spacing: -.03em; font-weight: 700; line-height: 1.02; color: var(--text); }
+  .brand h1 .dot { color: var(--accent); }
+  .brand .sub { font-family: var(--mono); font-size: 10px; color: var(--faint); letter-spacing: .02em; margin-top: 3px; }
+
+  .search { position: relative; flex: 1; max-width: 560px; margin: 0 auto; }
+  .search input {
+    width: 100%; padding: 11px 44px 11px 40px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); font-size: 14.5px; font-family: var(--sans);
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search input::placeholder { color: var(--faint); }
+  .search .ico { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--faint); width: 16px; height: 16px; pointer-events: none; }
+  .search kbd {
+    position: absolute; right: 11px; top: 50%; transform: translateY(-50%); font-family: var(--mono); font-size: 11px;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; padding: 1px 6px; border-radius: 5px;
+  }
+  .actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .iconbtn {
+    width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--muted); cursor: pointer; display: grid; place-items: center; transition: all .15s;
+  }
+  .iconbtn:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+  .iconbtn svg { width: 17px; height: 17px; }
+  /* export/import are local-only backup — visually secondary vs theme/density */
+  .iconbtn.subtle { border-color: transparent; background: transparent; color: var(--faint); width: 32px; height: 32px; }
+  .iconbtn.subtle svg { width: 15px; height: 15px; }
+  .iconbtn.subtle:hover { color: var(--muted); border-color: var(--border); background: var(--surface); }
+  /* 提需求 CTA —— 描边款,hover 填充,鼓励点击进飞书群 */
+  .feedback {
+    display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 13px;
+    border-radius: 9px; border: 1px solid var(--accent); background: transparent; color: var(--accent);
+    font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer;
+    text-decoration: none; white-space: nowrap; transition: all .15s;
+  }
+  .feedback:hover { background: var(--accent); color: #fff; box-shadow: var(--shadow-lift); }
+  .feedback svg { width: 15px; height: 15px; }
+  @media (max-width: 640px) { .feedback .txt { display: none; } .feedback { padding: 0; width: 36px; justify-content: center; } }
+
+  /* hover tooltip */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip); position: absolute; top: calc(100% + 9px); left: 50%;
+    transform: translateX(-50%) translateY(-4px); background: var(--text); color: var(--bg);
+    font-family: var(--sans); font-size: 11.5px; font-weight: 500; white-space: nowrap; letter-spacing: normal;
+    padding: 5px 9px; border-radius: 6px; box-shadow: var(--shadow-lift); pointer-events: none; opacity: 0;
+    transition: opacity .14s ease, transform .14s ease; z-index: 70;
+  }
+  [data-tip]::before {
+    content: ""; position: absolute; top: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+    border: 5px solid transparent; border-bottom-color: var(--text); pointer-events: none; opacity: 0;
+    transition: opacity .14s ease; z-index: 70;
+  }
+  [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+  [data-tip]:hover::before, [data-tip]:focus-visible::before { opacity: 1; }
+  [data-tip].tip-right::after { left: auto; right: 0; transform: translateY(-4px); }
+  [data-tip].tip-right:hover::after, [data-tip].tip-right:focus-visible::after { transform: translateY(0); }
+  [data-tip].tip-right::before { left: auto; right: 12px; transform: none; }
+
+  /* ---------- Shell ---------- */
+  .shell { max-width: none; margin: 0 auto; padding: 24px clamp(20px, 3vw, 48px); display: grid; grid-template-columns: 248px 1fr; gap: 28px; align-items: start; }
+
+  /* ---------- Sidebar ---------- */
+  aside { position: sticky; top: 82px; display: flex; flex-direction: column; gap: 18px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .panel-h { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 14px 16px 8px; }
+
+  .cats { padding: 0 8px 8px; display: flex; flex-direction: column; gap: 1px; }
+  .cat {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    color: var(--muted); font-size: 13.5px; border: none; background: none; width: 100%; text-align: left; font-family: var(--sans); transition: background .12s, color .12s;
+  }
+  .cat:hover { background: var(--surface-2); color: var(--text); }
+  .cat.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+  .cat .nm { flex: 1; }
+  .cat .ct { font-family: var(--mono); font-size: 11.5px; color: var(--faint); }
+  .cat.on .ct { color: var(--accent); }
+
+  .health { padding: 6px 16px 12px; display: flex; flex-direction: column; gap: 9px; }
+  .hrow { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted); }
+  .hrow .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .hrow b { font-family: var(--mono); color: var(--text); margin-left: auto; font-size: 12.5px; }
+  .probe {
+    margin: 2px 12px 12px; padding: 8px; width: calc(100% - 24px); font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px; transition: all .15s;
+  }
+  .probe:hover { color: var(--text); border-color: var(--border-strong); }
+  .probe svg { width: 13px; height: 13px; }
+  .probe.spin { pointer-events: none; opacity: .8; }
+  .probe.spin svg { animation: rot 1s linear infinite; }
+  @keyframes rot { to { transform: rotate(360deg); } }
+  .note { font-size: 11px; color: var(--faint); line-height: 1.5; padding: 0 16px 14px; }
+
+  /* ---------- Main ---------- */
+  main { min-width: 0; display: flex; flex-direction: column; gap: 22px; }
+  .filters { display: flex; flex-direction: column; gap: 12px; }
+  .fgroup { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .flabel { font-family: var(--mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-right: 2px; }
+  .chip {
+    font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; transition: all .12s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip:hover { border-color: var(--border-strong); color: var(--text); }
+  .chip .cd { width: 7px; height: 7px; border-radius: 50%; }
+  .chip.on { color: #fff; border-color: transparent; }
+  .chip.tag.on { background: var(--accent); border-color: var(--accent); }
+  .chip.env-aliyun.on { background: var(--env-aliyun); }
+  .chip.env-intranet.on { background: var(--env-intranet); }
+  .chip.env-saas.on { background: var(--env-saas); }
+
+  section h2 { display: flex; align-items: baseline; gap: 11px; margin: 12px 0 14px; font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+  section h2 .ct { font-family: var(--mono); font-size: 12px; color: var(--faint); font-weight: 400; }
+  section h2 .line { flex: 1; height: 1px; background: var(--border); }
+  section h2 .star { color: var(--warn); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 14px; }
+  body.dense .grid { grid-template-columns: repeat(auto-fill, minmax(206px, 1fr)); gap: 10px; }
+
+  .card {
+    position: relative; display: flex; flex-direction: column; gap: 10px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); padding: 15px 15px 14px; text-decoration: none; color: inherit;
+    box-shadow: var(--shadow); transition: transform .16s cubic-bezier(.2,.7,.3,1), box-shadow .16s, border-color .16s; outline: none;
+  }
+  body.dense .card { padding: 12px; gap: 8px; }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+  .card:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow); }
+  .card .top { display: flex; align-items: center; gap: 11px; }
+  .fav {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0; display: grid; place-items: center;
+    font-family: var(--mono); font-weight: 700; font-size: 16px; color: #fff; letter-spacing: -.02em;
+  }
+  body.dense .fav { width: 32px; height: 32px; font-size: 14px; }
+  .card .nm { font-size: 14.5px; font-weight: 600; letter-spacing: -.01em; line-height: 1.25; }
+  .card .host { font-family: var(--mono); font-size: 11px; color: var(--faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .card .desc { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  body.dense .card .desc { display: none; }
+  .card .foot { display: flex; align-items: center; gap: 6px; margin-top: auto; flex-wrap: wrap; }
+  .envpill {
+    font-family: var(--mono); font-size: 10.5px; padding: 1px 7px; border-radius: 5px; color: #fff; letter-spacing: .02em;
+  }
+  .envpill.aliyun { background: var(--env-aliyun); }
+  .envpill.intranet { background: var(--env-intranet); }
+  .envpill.saas { background: var(--env-saas); }
+  /* 登录方式徽章：轻量中性，和环境色块区分 */
+  .authpill {
+    display: inline-flex; align-items: center; gap: 4px; font-family: var(--sans); font-size: 10.5px; font-weight: 500;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); padding: 1px 7px 1px 5px; border-radius: 5px;
+  }
+  .authpill svg { width: 11px; height: 11px; opacity: .8; }
+  .ctag { font-family: var(--mono); font-size: 10.5px; color: var(--faint); background: var(--surface-2); border: 1px solid var(--border); padding: 1px 6px; border-radius: 5px; }
+  .acct {
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted); background: var(--surface-2);
+    border: 1px dashed var(--border-strong); padding: 1px 7px 1px 5px; border-radius: 5px; cursor: copy;
+    display: inline-flex; align-items: center; gap: 4px; transition: all .12s;
+  }
+  .acct:hover { color: var(--text); border-color: var(--accent); }
+  .acct svg { width: 10px; height: 10px; }
+  .acct.copied { color: var(--up); border-color: var(--up); border-style: solid; }
+  .lock {
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted); background: var(--surface-2);
+    border: 1px dashed var(--border-strong); padding: 1px 7px 1px 5px; border-radius: 5px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px; transition: all .12s;
+  }
+  .lock:hover { color: var(--accent); border-color: var(--accent); }
+  .lock svg { width: 10px; height: 10px; }
+  .lock.copied { color: var(--up); border-color: var(--up); border-style: solid; }
+
+  /* card hover tools: pin + qr */
+  .cardtools { position: absolute; top: 8px; right: 30px; display: flex; gap: 3px; opacity: 0; transition: opacity .14s; }
+  .card:hover .cardtools, .card:focus-within .cardtools, .card.pinned .cardtools { opacity: 1; }
+  .ctool {
+    width: 23px; height: 23px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface);
+    color: var(--faint); cursor: pointer; display: grid; place-items: center; padding: 0; transition: all .12s;
+  }
+  .ctool:hover { color: var(--accent); border-color: var(--accent); background: var(--surface-2); }
+  .ctool svg { width: 13px; height: 13px; }
+  .ctool.pin.on { color: var(--warn); border-color: var(--warn); }
+  .ctool.pin.on svg { fill: var(--warn); }
+
+  /* recent panel */
+  .recent { padding: 4px 8px 12px; display: flex; flex-direction: column; gap: 1px; }
+  .rrow {
+    display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 8px; cursor: pointer;
+    color: var(--muted); text-decoration: none; transition: background .12s;
+  }
+  .rrow:hover { background: var(--surface-2); color: var(--text); }
+  .rrow .rfav { width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; display: grid; place-items: center; font-family: var(--mono); font-weight: 700; font-size: 10px; color: #fff; }
+  .rrow .rnm { flex: 1; font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rrow .rtime { font-family: var(--mono); font-size: 10px; color: var(--faint); flex-shrink: 0; }
+
+  /* QR modal */
+  .modal { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+  .modal.show { display: flex; }
+  .modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow-lift); padding: 24px; max-width: 320px; width: 100%; text-align: center; }
+  .modal-card .qrname { font-size: 15px; font-weight: 650; margin-bottom: 3px; }
+  .modal-card .qrhost { font-family: var(--mono); font-size: 11px; color: var(--faint); margin-bottom: 16px; word-break: break-all; }
+  .qrbox { background: #fff; border-radius: 12px; padding: 16px; display: inline-block; line-height: 0; }
+  .qrbox svg { display: block; width: 200px; height: 200px; }
+  .modal-card .qrtip { font-size: 11.5px; color: var(--muted); margin-top: 14px; line-height: 1.5; }
+  .modal-close { margin-top: 16px; width: 100%; padding: 9px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-family: var(--sans); font-size: 13px; cursor: pointer; transition: all .12s; }
+  .modal-close:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* help panel */
+  .modal-card.help { max-width: 480px; text-align: left; max-height: 84vh; overflow-y: auto; }
+  .help .htitle { font-size: 17px; font-weight: 680; letter-spacing: -.01em; }
+  .help .htitle .dot { color: var(--accent); }
+  .help .hlead { color: var(--muted); font-size: 12.5px; margin: 2px 0 18px; }
+  .help hsec { display: block; margin-bottom: 17px; }
+  .help h4 { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--faint); margin: 0 0 9px; }
+  .help .krow { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 13px; color: var(--muted); }
+  .help kbd { font-family: var(--mono); font-size: 11px; background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; padding: 2px 7px; border-radius: 5px; color: var(--text); min-width: 16px; text-align: center; flex-shrink: 0; }
+  .help .flist { font-size: 13px; color: var(--muted); line-height: 1.75; margin: 0; padding: 0; list-style: none; }
+  .help .flist li { padding-left: 2px; }
+  .help .flist b { color: var(--text); font-weight: 600; }
+  .help .callout { background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .help .callout b { color: var(--text); }
+  .help .callout .warn { color: var(--warn); }
+  .help .tag-inline { font-family: var(--mono); font-size: 11px; background: var(--surface-2); border: 1px solid var(--border); padding: 0 5px; border-radius: 4px; color: var(--muted); }
+
+  .status { position: absolute; top: 13px; right: 13px; width: 9px; height: 9px; border-radius: 50%; }
+  .status::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; opacity: .25; background: inherit; }
+  .status.pulse::after { animation: pulse 1.6s ease-out infinite; }
+  .status.blink { animation: blink .9s ease-in-out infinite; }
+  @keyframes pulse { 0% { transform: scale(.8); opacity: .4; } 100% { transform: scale(2.4); opacity: 0; } }
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .hits { position: absolute; bottom: 12px; right: 13px; font-family: var(--mono); font-size: 10px; color: var(--faint); display: flex; align-items: center; gap: 3px; }
+  .hits svg { width: 10px; height: 10px; }
+  .empty { padding: 60px 20px; text-align: center; color: var(--faint); font-family: var(--mono); font-size: 13px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); opacity: 0;
+    background: var(--text); color: var(--bg); font-size: 13px; padding: 9px 16px; border-radius: 8px; z-index: 100;
+    pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: var(--shadow-lift);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 960px) {
+    .shell { grid-template-columns: 1fr; gap: 18px; }
+    aside { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  }
+  @media (max-width: 860px) {
+    .bar { flex-wrap: wrap; padding: 12px 16px; }
+    .search { order: 3; flex-basis: 100%; max-width: none; }
+    .search kbd { display: none; }
+    .shell { padding: 16px; }
+  }
+  @media (max-width: 560px) {
+    aside { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    body.dense .grid { grid-template-columns: 1fr 1fr; }
+    .card .desc { display: none; }
+    .brand .sub { display: none; }
+  }
+  @media (max-width: 380px) { .grid, body.dense .grid { grid-template-columns: 1fr; } }
+</style>
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <div class="wordmark">
+        <h1>acme<span class="dot">.</span></h1>
+        <div class="sub">内网站点导航台</div>
+      </div>
+    </div>
+    <div class="search">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+      <input id="q" type="text" placeholder="搜索站点、域名、标签…" autocomplete="off" spellcheck="false" aria-label="搜索">
+      <kbd>/</kbd>
+    </div>
+    <div class="actions">
+      <a class="feedback" href="https://im.example.com/invite" target="_blank" rel="noopener" data-tip="有新站点 / 需求 / 想法?点这里进飞书群反馈" aria-label="提需求">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1v.2h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg>
+        <span class="txt">提需求</span>
+      </a>
+      <button class="iconbtn subtle" id="export" data-tip="导出备份 · 下载 json" aria-label="导出">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+      </button>
+      <button class="iconbtn subtle" id="import" data-tip="导入数据 · 上传 json" aria-label="导入">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>
+      </button>
+      <input type="file" id="importfile" accept="application/json,.json" style="display:none">
+      <button class="iconbtn" id="help" data-tip="使用说明" aria-label="使用说明">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.2 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.8 2.5-2.8 2.5"/><line x1="12" y1="17" x2="12" y2="17"/></svg>
+      </button>
+      <button class="iconbtn" id="density" data-tip="密度切换" aria-label="密度切换">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+      <button class="iconbtn tip-right" id="theme" data-tip="主题切换 · 深/浅色" aria-label="主题切换">
+        <svg id="theme-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <aside>
+    <div class="panel">
+      <div class="panel-h">分类</div>
+      <div class="cats" id="cats"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">健康概览</div>
+      <div class="health" id="health"></div>
+      <button class="probe" id="probe">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+        <span id="probe-txt">重新探测</span>
+      </button>
+      <div class="note">状态由浏览器实时探测（no-cors GET）：能连通=在线，超时/失败=离线。<b style="color:var(--warn)">⚠️ 探测内网站点需先连上「飞连」客户端</b>，否则内网地址会误报离线。另：拿不到具体状态码；<b>本页走 HTTPS，无法探测 http:// 明文站点（如 Grafana），会被浏览器混合内容拦截而标「未知」，但点链接跳转仍可正常打开</b>。</div>
+    </div>
+    <div class="panel" id="recent-panel" style="display:none">
+      <div class="panel-h">最近访问</div>
+      <div class="recent" id="recent"></div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="filters" id="filters"></div>
+    <div id="content"></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal" id="qrmodal">
+  <div class="modal-card">
+    <div class="qrname" id="qrname"></div>
+    <div class="qrhost" id="qrhost"></div>
+    <div class="qrbox" id="qrbox"></div>
+    <div class="qrtip">手机相机扫码打开。<b style="color:var(--warn)">内网站点需手机也连「飞连」</b>。</div>
+    <button class="modal-close" id="qrclose">关闭</button>
+  </div>
+</div>
+<div class="modal" id="helpmodal">
+  <div class="modal-card help">
+    <div class="htitle">acme<span class="dot">.</span> · 使用说明</div>
+    <div class="hlead">团队内网站点导航台。你的个人偏好只存在本机浏览器,不上传服务器。</div>
+
+    <hsec>
+      <h4>键盘快捷键</h4>
+      <div class="krow"><kbd>/</kbd> 聚焦搜索框</div>
+      <div class="krow"><kbd>Enter</kbd> 在搜索框内直接打开第一个匹配站点</div>
+      <div class="krow"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 在卡片间移动焦点</div>
+      <div class="krow"><kbd>Esc</kbd> 清空搜索 / 关闭弹窗</div>
+      <div class="krow"><kbd>?</kbd> 打开本说明</div>
+    </hsec>
+
+    <hsec>
+      <h4>功能</h4>
+      <ul class="flist">
+        <li><b>📌 收藏置顶</b>:悬停卡片点右上星标,收藏的站点排到顶部「★ 收藏」区。</li>
+        <li><b>⚡ 常用直达</b>:按你的点击次数自动置顶最常用的站点。</li>
+        <li><b>最近访问</b>:左侧栏按时间倒序列出最近打开的站点。</li>
+        <li><b>账号 / 密码</b>:卡片上点 <span class="tag-inline">账号</span> 复制用户名,点 <span class="tag-inline">🔒 密码</span> 复制密码(不明文显示)。</li>
+        <li><b>二维码</b>:悬停卡片点 QR 按钮,手机扫码打开(内网站点手机需先连飞连)。</li>
+        <li><b>状态点</b>:卡片右上角 绿=在线 / 红=离线,由你的浏览器实时探测。</li>
+        <li><b>环境色块</b>:<span class="tag-inline">阿里云</span> 橙 · <span class="tag-inline">内网</span> 蓝 · <span class="tag-inline">SaaS</span> 紫。</li>
+        <li><b>主题 / 密度</b>:顶栏右侧可切深浅色、紧凑模式。</li>
+      </ul>
+    </hsec>
+
+    <hsec>
+      <h4>访问前提 · 飞连</h4>
+      <div class="callout">
+        走内网 / VPC 的站点,<b>必须先连上「飞连」客户端</b>才能打开(否则打不开,状态点也会误报离线):<br>
+        · <span class="tag-inline">内网</span> 蓝色块的站点(Nexus / Superset / ArgoCD / Jenkins,<span class="tag-inline">*.example.com</span>),以及 <b>Grafana</b>(VPC 内网域名 <span class="tag-inline">…-vpc.grafana.aliyuncs.com</span>);<br>
+        · 阿里云控制台、GitHub、飞书文档走公网,连不连飞连都能开。
+      </div>
+    </hsec>
+
+    <hsec>
+      <h4>导入 / 导出(顶栏 ↓ / ↑)</h4>
+      <div class="callout">
+        你的<b>收藏、点击次数、最近访问</b>只保存在<b>这台电脑的这个浏览器</b>(localStorage),<span class="warn">不同步、不上云</span>。换电脑 / 换浏览器 / 清缓存就会丢。<br>
+        <b>导出</b> = 存成 <b>nav-data.json</b> 文件备份;<b>导入</b> = 在另一台机器读回来。这是手动备份/迁移,不是自动同步。站点列表本身不受影响(那是统一维护的)。
+      </div>
+    </hsec>
+
+    <button class="modal-close" id="helpclose">知道了</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- Data (env: aliyun|intranet|saas；auth: aliyun-ram|github；独立账号才填 account/password) ----------
+  const CATS = [
+    { id: "observe",  name: "可观测" },
+    { id: "store",    name: "数据库 · 中间件" },
+    { id: "dataplat", name: "数据平台" },
+    { id: "research", name: "研发协作" },
+    { id: "infra",    name: "容器 · 基础设施" },
+    { id: "msvc",     name: "微服务 · 配置" },
+    { id: "docs",     name: "文档 · 知识库" },
+  ];
+  const SITES = [
+    // 可观测
+    { name: "Grafana", url: "http://grafana-vpc.example.com/dashboards", cat: "observe", env: "aliyun", account: "viewer", password: "your-password", tags: ["大盘","观测"], desc: "ALB / RDS / APM 指标大盘" },
+    { name: "生产日志 SLS", url: "https://sls.console.alibabacloud.com/", cat: "observe", env: "aliyun", auth: "aliyun-ram", tags: ["日志","prod"], desc: "生产服务日志检索" },
+    { name: "开发日志 SLS", url: "https://sls.console.alibabacloud.com/", cat: "observe", env: "aliyun", auth: "aliyun-ram", tags: ["日志","dev"], desc: "开发环境日志检索" },
+    { name: "ALB 日志 SLS", url: "https://sls.console.alibabacloud.com/", cat: "observe", env: "aliyun", auth: "aliyun-ram", tags: ["日志","入口"], desc: "网关访问日志与监控大盘" },
+    { name: "ARMS 应用监控", url: "https://armsnext.console.alibabacloud.com/#/us-west-1/tracing/list?from=now-5m&to=now&refresh=off", cat: "observe", env: "aliyun", auth: "aliyun-ram", tags: ["链路","APM"], desc: "调用链追踪与应用性能" },
+    { name: "云监控 CMS 2.0", url: "https://cmsnext.console.alibabacloud.com/", cat: "observe", env: "aliyun", auth: "aliyun-ram", tags: ["监控","告警"], desc: "统一监控 · 告警规则与飞书通知" },
+
+    // 数据库 · 中间件
+    { name: "RDS PostgreSQL", url: "https://rds.console.alibabacloud.com/rdsList/us-west-1", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["PG","数据库"], desc: "RDS 实例管理" },
+    { name: "Redis", url: "https://kvstore.console.alibabacloud.com/Redis/instance/us-west-1", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["缓存"], desc: "云数据库 Redis 实例" },
+    { name: "Kafka", url: "https://kafka.console.alibabacloud.com/region/us-west-1/instances", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["消息"], desc: "消息队列 Kafka 版" },
+    { name: "RocketMQ", url: "https://ons.console.alibabacloud.com/region/us-west-1/instances", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["消息"], desc: "消息队列 RocketMQ 版" },
+    { name: "DMS 数据管理", url: "https://dms-us-west-1.alibabacloud.com/", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["SQL","工单"], desc: "库表变更工单与在线查询" },
+    { name: "AnalyticDB PostgreSQL", url: "https://gpdb.console.alibabacloud.com/gpdb/us-west-1/list", cat: "store", env: "aliyun", auth: "aliyun-ram", tags: ["数仓","ADB"], desc: "分析型数据库 PG 版实例" },
+
+    // 数据平台
+    { name: "Superset", url: "https://superset.example.com/", cat: "dataplat", env: "intranet", auth: "aliyun-ram", tags: ["BI","报表"], desc: "自助 BI 报表与看板" },
+    { name: "DataWorks", url: "https://dataworks.console.alibabacloud.com/overview", cat: "dataplat", env: "aliyun", auth: "aliyun-ram", tags: ["数据开发"], desc: "数据开发与调度" },
+    { name: "MaxCompute", url: "https://maxcompute.console.alibabacloud.com/us-west-1/overview", cat: "dataplat", env: "aliyun", auth: "aliyun-ram", tags: ["大数据","ODPS"], desc: "大数据计算 MaxCompute" },
+
+    // 研发协作
+    { name: "GitHub", url: "https://github.com/your-org/", cat: "research", env: "saas", auth: "github", tags: ["代码"], desc: "your-org 组织代码仓库" },
+    { name: "Jenkins", url: "https://jenkins.example.com/", cat: "research", env: "intranet", auth: "aliyun-ram", tags: ["CI","构建"], desc: "镜像构建与流水线" },
+    { name: "ArgoCD", url: "https://argocd.example.com/", cat: "research", env: "intranet", auth: "aliyun-ram", tags: ["GitOps","部署"], desc: "ApplicationSet 同步与回滚" },
+    { name: "Nexus", url: "https://nexus.example.com/#browse/welcome", cat: "research", env: "intranet", account: "your-account", password: "your-password", tags: ["制品","仓库"], desc: "制品仓库 · npm / maven / docker 代理" },
+
+    // 容器 · 基础设施
+    { name: "阿里云控制台", url: "https://console.alibabacloud.com/", cat: "infra", env: "aliyun", auth: "aliyun-ram", tags: ["总控"], desc: "账号总控与资源总览" },
+    { name: "ACK 容器服务", url: "https://cs.console.alibabacloud.com/", cat: "infra", env: "aliyun", auth: "aliyun-ram", tags: ["k8s","集群"], desc: "Kubernetes 集群与工作负载" },
+
+    // 微服务 · 配置
+    { name: "MSE Nacos", url: "https://mse.console.alibabacloud.com/", cat: "msvc", env: "aliyun", auth: "aliyun-ram", tags: ["Nacos","配置中心"], desc: "MSE · Nacos 注册与配置中心" },
+    { name: "Nacos 配置审计", url: "https://nacos-history.example.com/", cat: "msvc", env: "intranet", tags: ["审计","自建"], desc: "Nacos 配置变更历史与操作人追踪" },
+
+    // 文档 · 知识库
+    { name: "研发工具使用说明", url: "https://wiki.example.com/page", cat: "docs", env: "saas", auth: "feishu", tags: ["研发","手册"], desc: "研发相关工具使用说明 · 飞书 Wiki" },
+    { name: "后端知识库", url: "https://wiki.example.com/page", cat: "docs", env: "saas", auth: "feishu", tags: ["后端","手册"], desc: "后端相关文档 · 飞书 Wiki" },
+  ];
+
+  const ENVS = [
+    { id: "aliyun", name: "阿里云", cls: "aliyun", varc: "--env-aliyun" },
+    { id: "intranet", name: "内网", cls: "intranet", varc: "--env-intranet" },
+    { id: "saas", name: "SaaS", cls: "saas", varc: "--env-saas" },
+  ];
+
+  // 登录方式徽章（统一标注，避免逐卡重复账号密码）
+  const AUTH = {
+    "aliyun-ram": { label: "阿里云 RAM", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.97 6 6 0 0 0-11.64-1.4A4 4 0 0 0 6.5 19z"/></svg>` },
+    "github": { label: "GitHub 账号", icon: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.46-1.11-1.46-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg>` },
+    "feishu": { label: "飞书账号", icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h9l5 5v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M14 3v5h5"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>` },
+  };
+
+  // ---------- State ----------
+  const LS = { theme: "nav.theme", dense: "nav.dense", hits: "nav.hits", pins: "nav.pins", recent: "nav.recent" };
+  let hits = {}, pins = new Set(), recent = [];
+  try { hits = JSON.parse(localStorage.getItem(LS.hits) || "{}"); } catch (e) { hits = {}; }
+  try { pins = new Set(JSON.parse(localStorage.getItem(LS.pins) || "[]")); } catch (e) { pins = new Set(); }
+  try { recent = JSON.parse(localStorage.getItem(LS.recent) || "[]"); } catch (e) { recent = []; }
+  const health = {}; // url -> "up"|"down"|"checking"|"unknown"
+  SITES.forEach(s => health[s.url] = "unknown");
+  let activeCat = "all";
+  let activeEnv = "all";
+  let activeTags = new Set();
+  let query = "";
+
+  const $ = (s) => document.querySelector(s);
+  const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
+
+  function host(url) { try { return new URL(url).host; } catch (e) { return url; } }
+  function hue(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
+  function favStyle(name, url) {
+    const h = hue(host(url) + name);
+    return `background: linear-gradient(140deg, hsl(${h} 52% 46%), hsl(${(h + 32) % 360} 54% 34%));`;
+  }
+  function initial(name) { const m = name.match(/[A-Za-z0-9]/); return m ? m[0].toUpperCase() : name.slice(0, 1); }
+  const STATUS_LABEL = { up: "在线", down: "离线", checking: "探测中", unknown: "未知" };
+  const STATUS_VAR = { up: "var(--up)", down: "var(--down)", checking: "var(--checking)", unknown: "var(--unknown)" };
+  const envName = (id) => (ENVS.find(e => e.id === id) || {}).name || id;
+
+  // ---------- Sidebar: categories ----------
+  function renderCats() {
+    const wrap = $("#cats"); wrap.innerHTML = "";
+    const mk = (id, name, count) => {
+      const b = el("button", "cat" + (activeCat === id ? " on" : ""));
+      b.innerHTML = `<span class="nm">${name}</span><span class="ct">${count}</span>`;
+      b.onclick = () => { activeCat = id; render(); renderCats(); };
+      return b;
+    };
+    wrap.appendChild(mk("all", "全部站点", SITES.length));
+    CATS.forEach(c => { const n = SITES.filter(s => s.cat === c.id).length; if (n) wrap.appendChild(mk(c.id, c.name, n)); });
+  }
+
+  // ---------- Sidebar: health ----------
+  function renderHealth() {
+    const wrap = $("#health"); wrap.innerHTML = "";
+    const order = ["up", "down", "checking", "unknown"];
+    const counts = {};
+    Object.values(health).forEach(v => counts[v] = (counts[v] || 0) + 1);
+    order.forEach(k => {
+      if (!counts[k] && k === "checking") return;
+      const row = el("div", "hrow");
+      row.innerHTML = `<span class="dot" style="background:${STATUS_VAR[k]}"></span>${STATUS_LABEL[k]}<b>${counts[k] || 0}</b>`;
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- Filters (env + tags) ----------
+  function renderFilters() {
+    const wrap = $("#filters"); wrap.innerHTML = "";
+
+    const envRow = el("div", "fgroup");
+    envRow.appendChild(Object.assign(el("span", "flabel"), { textContent: "环境" }));
+    const allEnv = el("button", "chip" + (activeEnv === "all" ? " tag on" : ""));
+    allEnv.textContent = "全部"; allEnv.onclick = () => { activeEnv = "all"; render(); renderFilters(); };
+    envRow.appendChild(allEnv);
+    ENVS.forEach(e => {
+      const on = activeEnv === e.id;
+      const b = el("button", "chip env-" + e.cls + (on ? " on" : ""));
+      b.innerHTML = `<span class="cd" style="background:var(${e.varc})"></span>${e.name}`;
+      b.onclick = () => { activeEnv = on ? "all" : e.id; render(); renderFilters(); };
+      envRow.appendChild(b);
+    });
+    wrap.appendChild(envRow);
+
+    const tagRow = el("div", "fgroup");
+    tagRow.appendChild(Object.assign(el("span", "flabel"), { textContent: "标签" }));
+    [...new Set(SITES.flatMap(s => s.tags))].sort().forEach(t => {
+      const b = el("button", "chip tag" + (activeTags.has(t) ? " on" : ""));
+      b.textContent = "#" + t;
+      b.onclick = () => { activeTags.has(t) ? activeTags.delete(t) : activeTags.add(t); render(); renderFilters(); };
+      tagRow.appendChild(b);
+    });
+    wrap.appendChild(tagRow);
+  }
+
+  // ---------- Card ----------
+  function card(s) {
+    const a = el("a", "card");
+    a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.tabIndex = 0; a.dataset.card = "1";
+    const st = health[s.url] || "unknown";
+    const cls = st === "up" ? " pulse" : (st === "checking" ? " blink" : "");
+    const n = hits[s.url] || 0;
+    const pinned = pins.has(s.url);
+    if (pinned) a.classList.add("pinned");
+    const uicon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>`;
+    const licon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>`;
+    const qricon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M20 14v0M17 20h0M20 17v4"/></svg>`;
+    const staricon = `<svg viewBox="0 0 24 24" fill="${pinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.5 6 .9-4.35 4.2 1 6L12 17.8 6.65 19.6l1-6L3.3 9.4l6-.9z"/></svg>`;
+    let cred = "";
+    if (s.auth && AUTH[s.auth]) cred += `<span class="authpill" title="登录方式：${AUTH[s.auth].label}">${AUTH[s.auth].icon}${AUTH[s.auth].label}</span>`;
+    if (s.account) cred += `<span class="acct" data-copy="${s.account}" data-kind="账号" title="点击复制账号">${uicon}${s.account}</span>`;
+    if (s.password) cred += `<span class="lock" data-copy="${s.password}" data-kind="密码" title="点击复制密码">${licon}密码</span>`;
+    else if (s.passwordHint) cred += `<span class="lock" data-hint="${s.passwordHint}" title="密码提示">${licon}密码?</span>`;
+    a.innerHTML = `
+      <span class="status${cls}" style="background:${STATUS_VAR[st]}" title="${STATUS_LABEL[st]}"></span>
+      <div class="cardtools">
+        <button type="button" class="ctool" data-qr="1" title="手机扫码打开" aria-label="二维码">${qricon}</button>
+        <button type="button" class="ctool pin${pinned ? ' on' : ''}" data-pin="1" title="${pinned ? '取消收藏' : '收藏置顶'}" aria-label="收藏">${staricon}</button>
+      </div>
+      <div class="top">
+        <div class="fav" style="${favStyle(s.name, s.url)}">${initial(s.name)}</div>
+        <div style="min-width:0">
+          <div class="nm">${s.name}</div>
+          <div class="host">${host(s.url)}</div>
+        </div>
+      </div>
+      <div class="desc">${s.desc}</div>
+      <div class="foot">
+        <span class="envpill ${s.env}">${envName(s.env)}</span>
+        ${cred}
+        ${s.tags.map(t => `<span class="ctag">${t}</span>`).join("")}
+      </div>
+      ${n ? `<div class="hits" title="你点击过 ${n} 次"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg>${n}</div>` : ""}
+    `;
+    a.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-copy]");
+      if (chip) { e.preventDefault(); copyText(chip.dataset.copy, chip, chip.dataset.kind); return; }
+      const hint = e.target.closest("[data-hint]");
+      if (hint) { e.preventDefault(); toast("🔒 密码提示：" + hint.dataset.hint); return; }
+      if (e.target.closest("[data-pin]")) { e.preventDefault(); togglePin(s.url); return; }
+      if (e.target.closest("[data-qr]")) { e.preventDefault(); showQR(s); return; }
+      hits[s.url] = (hits[s.url] || 0) + 1; localStorage.setItem(LS.hits, JSON.stringify(hits));
+      pushRecent(s.url);
+    });
+    return a;
+  }
+
+  function copyText(txt, node, kind) {
+    const done = () => {
+      node.classList.add("copied");
+      toast(kind === "密码" ? "已复制密码 🔒" : "已复制账号：" + txt);
+      setTimeout(() => node.classList.remove("copied"), 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done).catch(done);
+    else done();
+  }
+  let toastT;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1600);
+  }
+
+  // ---------- Pins ----------
+  function togglePin(url) {
+    if (pins.has(url)) { pins.delete(url); toast("已取消收藏"); }
+    else { pins.add(url); toast("★ 已收藏置顶"); }
+    localStorage.setItem(LS.pins, JSON.stringify([...pins]));
+    render();
+  }
+
+  // ---------- Recent ----------
+  function pushRecent(url) {
+    recent = recent.filter(r => r.url !== url);
+    recent.unshift({ url, ts: Date.now() });
+    recent = recent.slice(0, 8);
+    localStorage.setItem(LS.recent, JSON.stringify(recent));
+    renderRecent();
+  }
+  function relTime(ts) {
+    const d = Date.now() - ts, m = Math.floor(d / 60000);
+    if (m < 1) return "刚刚";
+    if (m < 60) return m + "分钟前";
+    const h = Math.floor(m / 60); if (h < 24) return h + "小时前";
+    return Math.floor(h / 24) + "天前";
+  }
+  function renderRecent() {
+    const panel = $("#recent-panel"), wrap = $("#recent");
+    const items = recent.map(r => ({ r, s: SITES.find(x => x.url === r.url) })).filter(x => x.s);
+    if (!items.length) { panel.style.display = "none"; return; }
+    panel.style.display = ""; wrap.innerHTML = "";
+    items.forEach(({ r, s }) => {
+      const a = el("a", "rrow");
+      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.innerHTML = `<span class="rfav" style="${favStyle(s.name, s.url)}">${initial(s.name)}</span><span class="rnm">${s.name}</span><span class="rtime">${relTime(r.ts)}</span>`;
+      a.addEventListener("click", () => { hits[s.url] = (hits[s.url] || 0) + 1; localStorage.setItem(LS.hits, JSON.stringify(hits)); pushRecent(s.url); render(); });
+      wrap.appendChild(a);
+    });
+  }
+
+  // ---------- QR encoder (byte mode, ECC-L, v1-5, self-contained) ----------
+  const QR = (function () {
+    function mul(a, b) { let z = 0; for (let i = 7; i >= 0; i--) { z = (z << 1) ^ ((z >>> 7) * 0x11d); z ^= ((b >>> i) & 1) * a; } return z & 0xff; }
+    function rsDivisor(deg) { const r = new Array(deg).fill(0); r[deg - 1] = 1; let root = 1; for (let i = 0; i < deg; i++) { for (let j = 0; j < r.length; j++) { r[j] = mul(r[j], root); if (j + 1 < r.length) r[j] ^= r[j + 1]; } root = mul(root, 2); } return r; }
+    function rsRem(data, div) { const r = div.map(() => 0); for (const b of data) { const f = b ^ r[0]; r.shift(); r.push(0); for (let i = 0; i < r.length; i++) r[i] ^= mul(div[i], f); } return r; }
+    const DCW = { 1: 19, 2: 34, 3: 55, 4: 80, 5: 108 }, ECW = { 1: 7, 2: 10, 3: 15, 4: 20, 5: 26 };
+    function fmt(mask) { const d = (0b01 << 3) | mask; let rem = d; for (let i = 0; i < 10; i++) rem = (rem << 1) ^ (((rem >>> 9) & 1) * 0x537); return ((d << 10) | rem) ^ 0x5412; }
+    function build(bytes) {
+      let ver = 0; for (let v = 1; v <= 5; v++) { if (Math.ceil((12 + 8 * bytes.length) / 8) <= DCW[v]) { ver = v; break; } }
+      if (!ver) return null;
+      const dcw = DCW[ver], bits = [], push = (val, n) => { for (let i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+      push(0b0100, 4); push(bytes.length, 8); bytes.forEach(b => push(b, 8));
+      const cap = dcw * 8; for (let i = 0; i < 4 && bits.length < cap; i++) bits.push(0);
+      while (bits.length % 8) bits.push(0);
+      const cws = []; for (let i = 0; i < bits.length; i += 8) { let b = 0; for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j]; cws.push(b); }
+      const pad = [0xEC, 0x11]; let pi = 0; while (cws.length < dcw) cws.push(pad[pi++ % 2]);
+      return { ver, cws: cws.concat(rsRem(cws, rsDivisor(ECW[ver]))) };
+    }
+    function matrix(ver, cws) {
+      const size = 17 + 4 * ver;
+      const m = Array.from({ length: size }, () => new Array(size).fill(null));
+      const res = Array.from({ length: size }, () => new Array(size).fill(false));
+      const set = (r, c, v) => { if (r >= 0 && r < size && c >= 0 && c < size) { m[r][c] = v; res[r][c] = true; } };
+      function finder(row, col) { for (let dr = -1; dr <= 7; dr++) for (let dc = -1; dc <= 7; dc++) { const dark = (dr >= 0 && dr <= 6 && dc >= 0 && dc <= 6) && ((dr === 0 || dr === 6 || dc === 0 || dc === 6) || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4)); set(row + dr, col + dc, dark); } }
+      finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+      for (let i = 8; i < size - 8; i++) { const v = i % 2 === 0; set(6, i, v); set(i, 6, v); }
+      if (ver >= 2) { const c = size - 7; for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) set(c + dr, c + dc, Math.max(Math.abs(dr), Math.abs(dc)) !== 1); }
+      set(size - 8, 8, true);
+      for (let i = 0; i <= 8; i++) { if (!res[8][i]) { m[8][i] = false; res[8][i] = true; } if (!res[i][8]) { m[i][8] = false; res[i][8] = true; } }
+      for (let i = 0; i < 8; i++) { if (!res[8][size - 1 - i]) { m[8][size - 1 - i] = false; res[8][size - 1 - i] = true; } if (!res[size - 1 - i][8]) { m[size - 1 - i][8] = false; res[size - 1 - i][8] = true; } }
+      const bits = []; cws.forEach(cw => { for (let i = 7; i >= 0; i--) bits.push((cw >> i) & 1); });
+      let bi = 0, dir = -1, row = size - 1;
+      for (let col = size - 1; col > 0; col -= 2) {
+        if (col === 6) col = 5;
+        for (;;) { for (let c = 0; c < 2; c++) { const cc = col - c; if (m[row][cc] === null && !res[row][cc]) m[row][cc] = bi < bits.length ? bits[bi++] === 1 : false; } row += dir; if (row < 0 || row >= size) { row -= dir; dir = -dir; break; } }
+      }
+      return { m, res, size };
+    }
+    const MASKS = [(i, j) => (i + j) % 2 === 0, (i, j) => i % 2 === 0, (i, j) => j % 3 === 0, (i, j) => (i + j) % 3 === 0, (i, j) => (Math.floor(i / 2) + Math.floor(j / 3)) % 2 === 0, (i, j) => (i * j) % 2 + (i * j) % 3 === 0, (i, j) => ((i * j) % 2 + (i * j) % 3) % 2 === 0, (i, j) => ((i + j) % 2 + (i * j) % 3) % 2 === 0];
+    function applyMask(base, res, size, k) { const fn = MASKS[k]; const m = base.map(r => r.slice()); for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if (!res[i][j] && fn(i, j)) m[i][j] = !m[i][j]; return m; }
+    function drawFmt(m, size, mask) { const b = fmt(mask), bit = i => ((b >> i) & 1) === 1; for (let i = 0; i <= 5; i++) m[i][8] = bit(i); m[7][8] = bit(6); m[8][8] = bit(7); m[8][7] = bit(8); for (let i = 9; i <= 14; i++) m[8][14 - i] = bit(i); for (let i = 0; i <= 7; i++) m[8][size - 1 - i] = bit(i); for (let i = 8; i <= 14; i++) m[size - 15 + i][8] = bit(i); }
+    function penalty(m, size) {
+      let p = 0;
+      for (let i = 0; i < size; i++) { let rc = 1, cc = 1; for (let j = 1; j < size; j++) { if (m[i][j] === m[i][j - 1]) rc++; else { if (rc >= 5) p += 3 + (rc - 5); rc = 1; } if (m[j][i] === m[j - 1][i]) cc++; else { if (cc >= 5) p += 3 + (cc - 5); cc = 1; } } if (rc >= 5) p += 3 + (rc - 5); if (cc >= 5) p += 3 + (cc - 5); }
+      for (let i = 0; i < size - 1; i++) for (let j = 0; j < size - 1; j++) if (m[i][j] === m[i][j + 1] && m[i][j] === m[i + 1][j] && m[i][j] === m[i + 1][j + 1]) p += 3;
+      let dark = 0; for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if (m[i][j]) dark++;
+      p += Math.floor(Math.abs(dark / (size * size) * 100 - 50) / 5) * 10;
+      return p;
+    }
+    return function encode(text) {
+      const bytes = Array.from(new TextEncoder().encode(text));
+      const b = build(bytes); if (!b) return null;
+      const { m: base, res, size } = matrix(b.ver, b.cws);
+      let best = null, bestP = Infinity;
+      for (let k = 0; k < 8; k++) { const mm = applyMask(base, res, size, k); drawFmt(mm, size, k); const pp = penalty(mm, size); if (pp < bestP) { bestP = pp; best = mm; } }
+      return { matrix: best, size };
+    };
+  })();
+
+  function qrSVG(text) {
+    const q = QR(text);
+    if (!q) return null;
+    const { matrix, size } = q, quiet = 4, dim = size + quiet * 2;
+    let path = "";
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if (matrix[i][j]) path += `M${j + quiet} ${i + quiet}h1v1h-1z`;
+    return `<svg viewBox="0 0 ${dim} ${dim}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><rect width="${dim}" height="${dim}" fill="#fff"/><path d="${path}" fill="#000"/></svg>`;
+  }
+  function showQR(s) {
+    const svg = qrSVG(s.url);
+    $("#qrname").textContent = s.name;
+    $("#qrhost").textContent = s.url;
+    $("#qrbox").innerHTML = svg || `<div style="color:#c00;font-size:12px;padding:20px">URL 过长，无法生成二维码</div>`;
+    $("#qrmodal").classList.add("show");
+  }
+  function hideQR() { $("#qrmodal").classList.remove("show"); }
+
+  // ---------- Export / Import ----------
+  function exportData() {
+    const blob = new Blob([JSON.stringify({ v: 1, pins: [...pins], hits, recent }, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob), a = el("a");
+    a.href = url; a.download = "nav-data.json"; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("已导出 nav-data.json");
+  }
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const d = JSON.parse(reader.result);
+        if (Array.isArray(d.pins)) pins = new Set(d.pins);
+        if (d.hits && typeof d.hits === "object") hits = d.hits;
+        if (Array.isArray(d.recent)) recent = d.recent.slice(0, 8);
+        localStorage.setItem(LS.pins, JSON.stringify([...pins]));
+        localStorage.setItem(LS.hits, JSON.stringify(hits));
+        localStorage.setItem(LS.recent, JSON.stringify(recent));
+        renderRecent(); render();
+        toast("导入成功");
+      } catch (e) { toast("导入失败：文件格式错误"); }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- Filter + render ----------
+  function match(s) {
+    if (activeCat !== "all" && s.cat !== activeCat) return false;
+    if (activeEnv !== "all" && s.env !== activeEnv) return false;
+    if (activeTags.size && !s.tags.some(t => activeTags.has(t))) return false;
+    if (query) {
+      const hay = (s.name + " " + host(s.url) + " " + s.desc + " " + s.tags.join(" ") + " " + envName(s.env)).toLowerCase();
+      if (!hay.includes(query)) return false;
+    }
+    return true;
+  }
+  const pristine = () => activeCat === "all" && activeEnv === "all" && !query && !activeTags.size;
+
+  function render() {
+    const root = $("#content"); root.innerHTML = "";
+    const list = SITES.filter(match);
+
+    if (pristine()) {
+      const pinned = SITES.filter(s => pins.has(s.url));
+      if (pinned.length) root.appendChild(sectionBlock("★ 收藏", pinned, true));
+    }
+
+    const frequent = [...list].filter(s => hits[s.url] && !pins.has(s.url)).sort((a, b) => hits[b.url] - hits[a.url]).slice(0, 5);
+    if (frequent.length && pristine()) root.appendChild(sectionBlock("⚡ 常用直达", frequent, true));
+
+    if (!list.length) { const e = el("div", "empty"); e.textContent = "// 没有匹配的站点"; root.appendChild(e); return; }
+
+    if (activeCat === "all") {
+      CATS.forEach(c => { const items = list.filter(s => s.cat === c.id); if (items.length) root.appendChild(sectionBlock(c.name, items)); });
+    } else {
+      const c = CATS.find(x => x.id === activeCat);
+      root.appendChild(sectionBlock(c ? c.name : "结果", list));
+    }
+  }
+
+  function sectionBlock(title, items, star) {
+    const sec = el("section");
+    const h = el("h2");
+    h.innerHTML = `<span${star ? ' class="star"' : ""}>${title}</span><span class="ct">${items.length}</span><span class="line"></span>`;
+    const grid = el("div", "grid");
+    items.forEach(s => grid.appendChild(card(s)));
+    sec.appendChild(h); sec.appendChild(grid);
+    return sec;
+  }
+
+  // ---------- Real health probe (browser best-effort) ----------
+  async function probeOne(url) {
+    // 混合内容:HTTPS 页面无法 fetch http:// 目标(浏览器直接拦),探测注定失败。
+    // 这类站点点链接跳转其实能开,所以标「未知」而不是误报「离线」。
+    if (location.protocol === "https:" && url.startsWith("http://")) return "unknown";
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    try {
+      await fetch(url, { mode: "no-cors", signal: ctrl.signal, cache: "no-store", redirect: "follow" });
+      clearTimeout(timer); return "up";
+    } catch (e) { clearTimeout(timer); return "down"; }
+  }
+  async function probeAll() {
+    const btn = $("#probe"); if (btn.classList.contains("spin")) return;
+    btn.classList.add("spin"); $("#probe-txt").textContent = "探测中…";
+    SITES.forEach(s => health[s.url] = "checking"); renderHealth(); render();
+
+    const queue = [...SITES]; const CONC = 6;
+    async function worker() {
+      while (queue.length) {
+        const s = queue.shift();
+        health[s.url] = await probeOne(s.url);
+        renderHealth(); render();
+      }
+    }
+    await Promise.all(Array.from({ length: CONC }, worker));
+    btn.classList.remove("spin"); $("#probe-txt").textContent = "重新探测";
+    const down = Object.values(health).filter(v => v === "down").length;
+    toast(down ? `探测完成 · ${down} 个不可达` : "探测完成 · 全部可达");
+  }
+  $("#probe").onclick = probeAll;
+
+  // ---------- Theme ----------
+  function applyTheme(t) {
+    if (t) document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme");
+    const dark = t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches);
+    $("#theme-ico").innerHTML = dark
+      ? '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+  }
+  const savedTheme = localStorage.getItem(LS.theme);
+  applyTheme(savedTheme || null);
+  $("#theme").onclick = () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    const dark = cur === "dark" || (!cur && matchMedia("(prefers-color-scheme: dark)").matches);
+    const next = dark ? "light" : "dark";
+    localStorage.setItem(LS.theme, next); applyTheme(next);
+  };
+
+  // ---------- Density ----------
+  if (localStorage.getItem(LS.dense) === "1") document.body.classList.add("dense");
+  $("#density").onclick = () => {
+    document.body.classList.toggle("dense");
+    localStorage.setItem(LS.dense, document.body.classList.contains("dense") ? "1" : "0");
+  };
+
+  // ---------- Search ----------
+  $("#q").addEventListener("input", (e) => { query = e.target.value.trim().toLowerCase(); render(); });
+  $("#q").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const first = SITES.filter(match)[0];
+      if (first) {
+        hits[first.url] = (hits[first.url] || 0) + 1; localStorage.setItem(LS.hits, JSON.stringify(hits));
+        pushRecent(first.url); render();
+        window.open(first.url, "_blank", "noopener");
+        toast("↗ 打开 " + first.name);
+      }
+    }
+  });
+
+  // ---------- Keyboard ----------
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      if ($("#qrmodal").classList.contains("show")) { hideQR(); return; }
+      if ($("#helpmodal").classList.contains("show")) { hideHelp(); return; }
+    }
+    if (e.key === "?" && document.activeElement !== $("#q")) { e.preventDefault(); showHelp(); return; }
+    if (e.key === "/" && document.activeElement !== $("#q")) { e.preventDefault(); $("#q").focus(); return; }
+    if (e.key === "Escape") {
+      if (document.activeElement === $("#q")) { $("#q").value = ""; query = ""; render(); $("#q").blur(); }
+      return;
+    }
+    const cards = [...document.querySelectorAll('[data-card]')]; if (!cards.length) return;
+    const idx = cards.indexOf(document.activeElement);
+    if (["ArrowDown", "ArrowRight", "ArrowUp", "ArrowLeft"].includes(e.key)) {
+      if (document.activeElement === $("#q") && e.key === "ArrowDown") { e.preventDefault(); cards[0].focus(); return; }
+      if (idx === -1) return;
+      e.preventDefault();
+      const fwd = e.key === "ArrowDown" || e.key === "ArrowRight";
+      cards[fwd ? Math.min(idx + 1, cards.length - 1) : Math.max(idx - 1, 0)].focus();
+    }
+  });
+
+  // ---------- Export / Import / QR wiring ----------
+  $("#export").onclick = exportData;
+  $("#import").onclick = () => $("#importfile").click();
+  $("#importfile").addEventListener("change", (e) => { if (e.target.files[0]) importData(e.target.files[0]); e.target.value = ""; });
+  $("#qrclose").onclick = hideQR;
+  $("#qrmodal").addEventListener("click", (e) => { if (e.target === $("#qrmodal")) hideQR(); });
+
+  // ---------- Help ----------
+  function showHelp() { $("#helpmodal").classList.add("show"); }
+  function hideHelp() { $("#helpmodal").classList.remove("show"); }
+  $("#help").onclick = showHelp;
+  $("#helpclose").onclick = hideHelp;
+  $("#helpmodal").addEventListener("click", (e) => { if (e.target === $("#helpmodal")) hideHelp(); });
+  if (!localStorage.getItem("nav.seenhelp")) { showHelp(); localStorage.setItem("nav.seenhelp", "1"); }
+
+  // ---------- Init ----------
+  renderCats(); renderHealth(); renderFilters(); renderRecent(); render();
+  probeAll(); // 加载即探测一次
+})();
+</script>

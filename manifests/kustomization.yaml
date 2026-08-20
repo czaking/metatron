@@ -1,0 +1,26 @@
+# Metatron 内网站点导航台 —— Kustomize 入口
+#
+# 为什么用 kustomize(区别于 nacos-config-history 的裸 manifests):
+#   本站的“数据”就是 site-nav.html 本身,会频繁改。用 configMapGenerator 把
+#   HTML / nginx.conf 当真实文件管理(直接编辑,不用往 YAML 里塞 56KB 带缩进),
+#   且生成的 ConfigMap 带内容哈希后缀 —— 文件一改,CM 名变,Deployment 引用被
+#   自动改写,Pod 触发滚动更新,新页面立即生效。ArgoCD 原生支持 kustomize。
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: metatron
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  # index.html= 把仓库里的 site-nav.html 映射成 CM 内的 index.html
+  - name: metatron-html
+    files:
+      - index.html=site-nav.html
+  # default.conf= nginx 站点配置
+  - name: metatron-nginx
+    files:
+      - default.conf=nginx.conf
