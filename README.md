@@ -2,6 +2,15 @@
 
 **English** | [中文](#中文)
 
+## Why — pain points this solves
+
+| Team pain point | What Metatron does |
+|---|---|
+| **Internal sites scattered** — consoles, Grafana, CI, docs bookmarks live in every browser | **One searchable page**: category tabs, environment tags (prod/dev/intranet/SaaS), keyword search |
+| **Credentials passed around in chat** | Per-site `account/password` with **one-click copy** (keep it behind an intranet-only ingress) |
+| **New hires don't know where anything is** | A self-describing inventory with descriptions and auth notes per site |
+| **Maintaining a portal shouldn't need a build pipeline** | Edit one HTML file → merge → Pods roll automatically (kustomize ConfigMap hash) |
+
 ## Features
 
 - **One HTML file is the whole site** (`manifests/site-nav.html`): inline CSS/JS, zero external assets.
@@ -51,6 +60,15 @@ Fields: `cat` (category tab), `env` (`aliyun` / `intranet` / `saas`), `auth`, `t
 ## 中文
 
 [English](#metatron--intranet-site-navigator) | **中文**
+
+### 为什么做这个(解决的痛点)
+
+| 团队痛点 | Metatron 的做法 |
+|---|---|
+| **内网站点散落各处**——云控制台、Grafana、CI、文档收藏散在每个人的浏览器里 | **一页收拢**:分类页签、环境标签(prod/dev/内网/SaaS)、关键词搜索 |
+| **账号密码靠聊天工具传来传去** | 站点级 `account/password` 字段,**一键复制**(务必只挂内网 ingress) |
+| **新人不知道从哪进门** | 每个站点带描述与登录方式说明的自描述清单 |
+| **维护一个导航台不该引入构建流水线** | 改一个 HTML 文件 → 合并 → Pod 自动滚动(kustomize ConfigMap 哈希) |
 
 ### 特性
 
